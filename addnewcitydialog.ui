@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AddNewCityDialog</class>
+ <widget class="QDialog" name="AddNewCityDialog">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>420</width>
+    <height>260</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>320</width>
+    <height>260</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>620</width>
+    <height>260</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <family>Microsoft YaHei UI</family>
+    <pointsize>10</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>Add new city item</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="images.qrc">
+    <normaloff>:/icon/icon.png</normaloff>:/icon/icon.png</iconset>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="continentLabel">
+     <property name="font">
+      <font>
+       <family>Microsoft YaHei UI</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Continent:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="countryLabel">
+     <property name="text">
+      <string>Country:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="cityLabel">
+     <property name="text">
+      <string>City:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="populationLabel">
+     <property name="text">
+      <string>Population:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="recordHighTemperatureLabel">
+     <property name="text">
+      <string>Highest T:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="recordLowTemperatureLabel">
+     <property name="text">
+      <string>Lowest T:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QComboBox" name="inputContinentComboBox">
+     <item>
+      <property name="text">
+       <string>Select continent</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Africa</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Asia</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Australia/Oceania</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Europe</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>North America</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>South America</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLineEdit" name="inputCountryLineEdit">
+     <property name="inputMethodHints">
+      <set>Qt::ImhLatinOnly</set>
+     </property>
+     <property name="inputMask">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLineEdit" name="inputCityLineEdit">
+     <property name="inputMethodHints">
+      <set>Qt::ImhLatinOnly</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLineEdit" name="inputPopulationLineEdit">
+     <property name="inputMethodHints">
+      <set>Qt::ImhDigitsOnly</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLineEdit" name="inputHighTempLineEdit">
+     <property name="inputMethodHints">
+      <set>Qt::ImhDigitsOnly</set>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QLineEdit" name="inputLowTempLineEdit">
+     <property name="autoFillBackground">
+      <bool>true</bool>
+     </property>
+     <property name="inputMethodHints">
+      <set>Qt::ImhDigitsOnly</set>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <spacer name="horizontalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="7" column="1">
+    <widget class="QDialogButtonBox" name="save_cancel_buttonBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>2</horstretch>
+       <verstretch>2</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="images.qrc"/>
+ </resources>
+ <connections/>
+</ui>

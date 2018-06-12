@@ -1,0 +1,5 @@
+Europe	Ukraine	Lviv	723605	36	-29
+Europe	Ukraine	Kyiv	2935996	40	-32
+Africa	Republic of Botswana	Gaborone 	227333	33	5
+Africa	Republic of Sierra Leone	Freetown	1200000	35	19
+North America	Canada	Ottawa	860928	38	-39
