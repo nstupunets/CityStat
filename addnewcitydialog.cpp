@@ -1,14 +1,32 @@
 #include "addnewcitydialog.h"
 #include "ui_addnewcitydialog.h"
+#include "dataloader.h"
 
 #include <QIcon>
+#include <QIntValidator>
+#include <QDoubleValidator>
 
 AddNewCityDialog::AddNewCityDialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::AddNewCityDialog),
-    m_messageBoxInfo{new QMessageBox(this)}
+    ui(new Ui::AddNewCityDialog)
 {
     ui->setupUi(this);
+
+    auto *intValidator = new QIntValidator(this);
+    intValidator->setBottom(0);
+    auto *doubleValidator = new QDoubleValidator(this);
+
+    ui->inputPopulationLineEdit->setValidator(intValidator);
+    ui->inputLowTempLineEdit->setValidator(doubleValidator);
+    ui->inputHighTempLineEdit->setValidator(doubleValidator);
+
+    for(auto &i : DataLoader::CONTINENTS)
+    {
+        ui->inputContinentComboBox->addItem(i);
+    }
+
+    connect(ui->saveCancelButtonBox, &QDialogButtonBox::rejected, this, &AddNewCityDialog::onSaveCancelButtonBoxRejected);
+    connect(ui->saveCancelButtonBox, &QDialogButtonBox::accepted, this, &AddNewCityDialog::onSaveCancelButtonBoxAccepted);
 }
 
 AddNewCityDialog::~AddNewCityDialog()
@@ -16,67 +34,42 @@ AddNewCityDialog::~AddNewCityDialog()
     delete ui;
 }
 
-void AddNewCityDialog::on_save_cancel_buttonBox_accepted()
+void AddNewCityDialog::onSaveCancelButtonBoxAccepted()
 {
-    if (ui->inputContinentComboBox->currentText() == "Select continent"
-        || ui->inputCountryLineEdit->text().isEmpty()
-        || ui->inputCityLineEdit->text().isEmpty()
-        || ui->inputPopulationLineEdit->text().isEmpty()
-        || ui->inputHighTempLineEdit->text().isEmpty()
-        || ui->inputLowTempLineEdit->text().isEmpty())
+    auto continent = ui->inputContinentComboBox->currentText();
+    auto country = ui->inputCountryLineEdit->text();
+    auto city = ui->inputCityLineEdit->text();
+    auto population = ui->inputPopulationLineEdit->text();
+    auto highestT = ui->inputHighTempLineEdit->text();
+    auto lowestT = ui->inputLowTempLineEdit->text();
+
+    if ( country.isEmpty() || city.isEmpty()
+         || population.isEmpty() || highestT.isEmpty() || lowestT.isEmpty())
     {
-        m_messageBoxInfo->setIcon(QMessageBox::Critical);
-        m_messageBoxInfo->setText(QString("Cannot add new item"));
-        m_messageBoxInfo->setInformativeText(QString("Empty fields were found, please fill all data"));
-        m_messageBoxInfo->setDefaultButton(QMessageBox::Ok);
-        m_messageBoxInfo->show();
+        showErrorMessage("Empty fields were found, please fill all data");
         return;
     }
 
-    bool wasConvertedPopulation(false), wasConvertedHighTemp(false), wasConvertedLowTemp(false);
-    //if (ui->inputCountryLineEdit->text().toUInt(&wasConverted); !wasConverted)
-    ui->inputPopulationLineEdit->text().toUInt(&wasConvertedPopulation);
-    ui->inputHighTempLineEdit->text().toInt(&wasConvertedHighTemp);
-    ui->inputLowTempLineEdit->text().toInt(&wasConvertedLowTemp);
-
-    if (!wasConvertedPopulation || !wasConvertedHighTemp || !wasConvertedLowTemp)
-    {
-        m_messageBoxInfo->setIcon(QMessageBox::Critical);
-        m_messageBoxInfo->setText(QString("Cannot add new item"));
-        if (!wasConvertedPopulation)
-            m_messageBoxInfo->setInformativeText("Invalid population info");
-        else if (!wasConvertedHighTemp)
-            m_messageBoxInfo->setInformativeText("Invalid \"Record high temperature\" value");
-        else
-            m_messageBoxInfo->setInformativeText("Invalid \"Record low temperature\" value");
-        m_messageBoxInfo->setDefaultButton(QMessageBox::Ok);
-        m_messageBoxInfo->show();
-        return;
-    }
-    QStringList itemInfo { ui->inputContinentComboBox->currentText()
-                          ,ui->inputCountryLineEdit->text()
-                          ,ui->inputCityLineEdit->text()
-                          ,ui->inputPopulationLineEdit->text()
-                          ,ui->inputHighTempLineEdit->text()
-                          ,ui->inputLowTempLineEdit->text()};
-    emit addNewItem(itemInfo);
-
-    clearInputData();
+    CityItem itemInfo (continent.toUtf8().constData(), country.toUtf8().constData(),
+                       city.toUtf8().constData(), population.toUInt(), highestT.toDouble(),
+                       lowestT.toDouble());
+    emit itemAdded(itemInfo);
     this->close();
 }
 
-void AddNewCityDialog::on_save_cancel_buttonBox_rejected()
+void AddNewCityDialog::onSaveCancelButtonBoxRejected()
 {
-    clearInputData();
     this->close();
 }
 
-void AddNewCityDialog::clearInputData()
+void AddNewCityDialog::showErrorMessage(const QString &reason)
 {
-    ui->inputContinentComboBox->clearEditText();
-    ui->inputCountryLineEdit->clear();
-    ui->inputCityLineEdit->clear();
-    ui->inputPopulationLineEdit->clear();
-    ui->inputHighTempLineEdit->clear();
-    ui->inputLowTempLineEdit->clear();
+    QMessageBox *messageBoxInfo = new QMessageBox(this);
+    messageBoxInfo->setAttribute(Qt::WA_DeleteOnClose, true);
+    messageBoxInfo->setIcon(QMessageBox::Critical);
+    messageBoxInfo->setText(QString("Cannot add new item"));
+    messageBoxInfo->setInformativeText(reason);
+    messageBoxInfo->setDefaultButton(QMessageBox::Ok);
+    messageBoxInfo->show();
+    return;
 }

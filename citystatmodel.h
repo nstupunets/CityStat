@@ -1,62 +1,59 @@
 #ifndef CITYSTATMODEL_H
 #define CITYSTATMODEL_H
 
+#include "iaggragateddataprovider.h"
 #include "cityitem.h"
+#include "dataloader.h"
 
-#include <QAbstractTableModel>
-#include <QList>
-#include <QString>
 #include <memory>
 #include <limits>
+#include <vector>
+
+#include <QAbstractTableModel>
+#include <QString>
 
 class DataLoader;
 
-class CityStatModel : public QAbstractTableModel
+class CityStatModel : public QAbstractTableModel, public IAggragatedDataProvider
 {
     Q_OBJECT
 
 public:
     explicit CityStatModel(QObject *parent = nullptr);
-    ~CityStatModel();
-
-    // Header:
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-    //bool setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role = Qt::EditRole) override;
-
-    // Basic functionality:
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
-
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-
-    // Editable:
-    bool setData(const QModelIndex &index, const QVariant &value,
-                 int role = Qt::EditRole) override;
-
-    Qt::ItemFlags flags(const QModelIndex& index) const override;
-
-    // Add data:
-    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    // Remove data:
-    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-
+    virtual ~CityStatModel();
     //fill population info
-    void fillPopulationInfo();
-public slots:
-    void saveDataInitiated();
+    void updatePopulationInfo();
+    void saveData();
+    bool readData(unsigned int &skippedItemsCount);
+    void insertCityItem(const CityItem &item);
 
 signals:
-    void isSaveDataSuccessfull(bool isSavingSuccessfull, unsigned int savedItemsCounter);
-    void populationChanged(unsigned int maxPopulation,unsigned int minPopulation,unsigned int totalPopulation);
+    void dataSaved(bool successfull, unsigned int savedItemsCounter);
+    void populationStatisticsChanged();
 
 private:
-    QList <CityItem> m_cityItemsList;
-    std::unique_ptr<DataLoader> m_dataLoader;
+    // Header:
+    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    // Basic functionality:
+    virtual int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    virtual int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    // Editable:
+    virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    virtual Qt::ItemFlags flags(const QModelIndex& index) const override;
 
-    unsigned int m_minPopulationElement = std::numeric_limits<unsigned int>::max();
-    unsigned int m_maxPopulationElement = 0;
-    unsigned int m_totalPopulationElement = 0;
+    //overloaded methods of IAggragatedDataProvider
+    virtual unsigned int getMaxPopulation() const override {return m_maxPopulation;}
+    virtual unsigned int getMinPopulation() const override {return m_minPopulation;}
+    virtual unsigned int getTotalPopulation() const override {return m_totalPopulation;}
 
+    //private fields
+    std::vector <CityItem> m_cityItemsVector;
+    DataLoader m_dataLoader;
+
+    unsigned int m_maxPopulation = 0;
+    unsigned int m_minPopulation = std::numeric_limits<unsigned int>::max();
+    unsigned int m_totalPopulation = 0;
 };
 
 #endif // CITYSTATMODEL_H

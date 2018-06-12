@@ -30,9 +30,10 @@ SOURCES += \
         citystatmainwindow.cpp \
     citystatmodel.cpp \
     dataloader.cpp \
-    cityitem.cpp \
     citystatitemdelegate.cpp \
-    addnewcitydialog.cpp
+    addnewcitydialog.cpp \
+    cityitem.cpp \
+    statusbarwidget.cpp
 
 HEADERS += \
         citystatmainwindow.h \
@@ -40,7 +41,9 @@ HEADERS += \
     dataloader.h \
     cityitem.h \
     citystatitemdelegate.h \
-    addnewcitydialog.h
+    addnewcitydialog.h \
+    iaggragateddataprovider.h \
+    statusbarwidget.h
 
 FORMS += \
         citystatmainwindow.ui \

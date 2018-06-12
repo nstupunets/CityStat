@@ -1,14 +1,28 @@
 #include "citystatmodel.h"
 #include "cityitem.h"
-#include "dataloader.h"
 
-CityStatModel::CityStatModel(QObject *parent): QAbstractTableModel(parent)
-{
-    m_dataLoader = std::make_unique<DataLoader>();
-    m_cityItemsList = m_dataLoader->readCityItemsList();
-}
+#include <string>
+#include <algorithm>
+
+CityStatModel::CityStatModel(QObject *parent): QAbstractTableModel(parent){}
 
 CityStatModel::~CityStatModel(){}
+
+bool CityStatModel::readData(unsigned int &skippedItemsCount)
+{
+    auto successfull = m_dataLoader.readCityItemsVector(m_cityItemsVector,skippedItemsCount);
+
+    if (successfull)
+    {
+        m_totalPopulation = 0;
+        for(auto &cityItem : m_cityItemsVector)
+            m_totalPopulation += cityItem.getPopulation();
+
+        updatePopulationInfo();
+    }
+
+    return successfull;
+}
 
 QVariant CityStatModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
@@ -19,30 +33,11 @@ QVariant CityStatModel::headerData(int section, Qt::Orientation orientation, int
 
     if (orientation == Qt::Horizontal)
     {
-        switch (section)
-        {
-        case 0:
-            header = "Continent";
-            break;
-        case 1:
-            header = "Country";
-            break;
-        case 2:
-            header = "City";
-            break;
-        case 3:
-            header = "Population";
-            break;
-        case 4:
-            header = "Highest T";
-            break;
-        case 5:
-            header = "Lowest T";
-            break;
-        default:
+        if ((section < 0) || (section > DataLoader::ATTRIBUTES.size() - 1))
             header = "Unknown";
-            break;
-        }
+        else
+            header = DataLoader::ATTRIBUTES[section];
+
         return QVariant(header);
     }
 
@@ -55,27 +50,16 @@ QVariant CityStatModel::headerData(int section, Qt::Orientation orientation, int
     return QVariant();
 }
 
-//bool CityStatModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
-//{
-//    if (value != headerData(section, orientation, role)) {
-//        // FIXME: Implement me!
-//        emit headerDataChanged(orientation, section, section);
-//        return true;
-//    }
-//    return false;
-//}
-
-
 int CityStatModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return m_cityItemsList.size();
+    return m_cityItemsVector.size();
 }
 
 int CityStatModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 6;
+    return DataLoader::ATTRIBUTES.size();
 }
 
 QVariant CityStatModel::data(const QModelIndex &index, int role) const
@@ -83,25 +67,25 @@ QVariant CityStatModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() >= m_cityItemsList.size() || index.row() < 0)
+    if (index.row() >= m_cityItemsVector.size() || index.row() < 0)
          return QVariant();
 
     QVariant returnValue;
     if (role == Qt::DisplayRole || role == Qt::EditRole)
     {
-        CityItem item = m_cityItemsList.at(index.row());
+        CityItem item = m_cityItemsVector.at(index.row());
         if (index.column() == 0)
-            returnValue = item.continentName;
+            returnValue = QString(item.getContinent().c_str());
         else if (index.column() == 1)
-            returnValue = item.countryName;
+            returnValue = QString(item.getCountry().c_str());
         else if (index.column() == 2)
-            returnValue = item.cityName;
+            returnValue = QString(item.getCity().c_str());
         else if (index.column() == 3)
-            returnValue = item.cityPopulation;
+            returnValue = item.getPopulation();
         else if (index.column() == 4)
-            returnValue = item.recordHighTempereture;
+            returnValue = item.getHighestT();
         else if (index.column() == 5)
-            returnValue = item.recordLowTempereture;
+            returnValue = item.getLowestT();
      }
      return returnValue;
 }
@@ -110,37 +94,61 @@ bool CityStatModel::setData(const QModelIndex &index, const QVariant &value, int
 {
     if (data(index, role) != value)
     {
+        CityItem &item = m_cityItemsVector[index.row()];
         switch (index.column())
         {
         case 0:
         {
-            m_cityItemsList[index.row()].continentName=value.toString();
+            item.setContinent(value.toString().toStdString());
             break;
         }
         case 1:
         {
-            m_cityItemsList[index.row()].countryName=value.toString();
+            item.setCountry(value.toString().toStdString());
             break;
         }
         case 2:
         {
-            m_cityItemsList[index.row()].cityName=value.toString();
+            item.setCity(value.toString().toStdString());
             break;
         }
         case 3:
         {
-            m_cityItemsList[index.row()].cityPopulation=value.toUInt();
-            fillPopulationInfo();
+            auto currentValue = value.toUInt();
+            if ( currentValue > item.getPopulation())
+            {
+                auto diff = value.toUInt() - item.getPopulation();
+                m_totalPopulation += diff;
+            }
+            else
+            {
+                auto diff = item.getPopulation() - value.toUInt();
+                m_totalPopulation -= diff;
+            }
+
+            auto prevValue = item.getPopulation();
+            item.setPopulation(currentValue);
+
+            if (m_minPopulation > currentValue)
+                m_minPopulation = currentValue;
+
+            if (m_maxPopulation < currentValue)
+                m_maxPopulation = currentValue;
+
+            if ((m_minPopulation == prevValue)||(m_maxPopulation == prevValue))
+                updatePopulationInfo();
+
+            emit populationStatisticsChanged();
             break;
         }
         case 4:
         {
-            m_cityItemsList[index.row()].recordHighTempereture=value.toInt();
+            item.setHighestT(value.toDouble());
             break;
         }
         case 5:
         {
-            m_cityItemsList[index.row()].recordLowTempereture=value.toInt();
+            item.setLowestT(value.toDouble());
             break;
         }
         }
@@ -155,53 +163,26 @@ Qt::ItemFlags CityStatModel::flags(const QModelIndex &index) const
     return QAbstractTableModel::flags(index) | Qt::ItemIsEditable;
 }
 
-bool CityStatModel::insertRows(int row, int count, const QModelIndex &parent)
-{
-    beginInsertRows(parent, row, row + count - 1);
-    for (int i = 0; i<count;i++)
-    {
-        CityItem item;
-        item.continentName="";
-        item.countryName="";
-        item.cityName="";
-        item.cityPopulation = 0;
-        item.recordHighTempereture = 0;
-        item.recordLowTempereture = 0;
-        m_cityItemsList.push_back(item);
-    }
-    endInsertRows();
-    return true;
-}
-
-bool CityStatModel::removeRows(int row, int count, const QModelIndex &parent)
-{
-    beginRemoveRows(parent, row, row + count - 1);
-    // FIXME: Implement me!
-    endRemoveRows();
-}
-
-void CityStatModel::saveDataInitiated()
+void CityStatModel::saveData()
 {
     unsigned int savedItemsCounter = 0;
-    bool isSavingSuccessfull = m_dataLoader->writeCityItemsList(m_cityItemsList, savedItemsCounter);
-    emit isSaveDataSuccessfull(isSavingSuccessfull, savedItemsCounter);
+
+    bool isSavingSuccessfull = m_dataLoader.writeCityItemsVector(m_cityItemsVector, savedItemsCounter);
+    emit dataSaved(isSavingSuccessfull, savedItemsCounter);
 }
 
-void CityStatModel::fillPopulationInfo()
+void CityStatModel::updatePopulationInfo()
 {
-    m_minPopulationElement = std::numeric_limits<unsigned int>::max();
-    m_maxPopulationElement = 0;
-    m_totalPopulationElement = 0;
+    auto result = std::minmax_element(m_cityItemsVector.begin(), m_cityItemsVector.end(),
+        [](const auto &first, const auto &second) {return first.getPopulation() < second.getPopulation();});
 
-    for(int i = 0; i < m_cityItemsList.size(); i++)
-    {
-        if ( m_cityItemsList[i].cityPopulation > m_maxPopulationElement)
-            m_maxPopulationElement =  m_cityItemsList[i].cityPopulation;
+    m_minPopulation = (*result.first).getPopulation();
+    m_maxPopulation = (*result.second).getPopulation();
+}
 
-        if (m_cityItemsList[i].cityPopulation < m_minPopulationElement)
-            m_minPopulationElement =  m_cityItemsList[i].cityPopulation;
-
-        m_totalPopulationElement += m_cityItemsList[i].cityPopulation;
-    }
-    emit populationChanged(m_maxPopulationElement,m_minPopulationElement,m_totalPopulationElement);
+void CityStatModel::insertCityItem(const CityItem& item)
+{
+     beginInsertRows(QModelIndex(), rowCount(), rowCount());
+     m_cityItemsVector.push_back(item);
+     endInsertRows();
 }

@@ -1,94 +1,108 @@
 #include "dataloader.h"
 #include "cityitem.h"
-#include <QByteArray>
-#include <QDebug>
-#include <QFile>
-#include <QTextStream>
+#include <algorithm>
+#include <fstream>
 
-QList <CityItem> DataLoader::readCityItemsList ()
+constexpr std::array <const char*,DataLoader::CONTINENTS_COUNT> DataLoader::CONTINENTS;
+constexpr std::array <const char*,DataLoader::COLUMS_COUNT> DataLoader::ATTRIBUTES;
+
+bool DataLoader::readCityItemsVector (std::vector <CityItem> &cityItemsVector, unsigned int &skippedItemsCount)
 {
-    int unsuccesfullAttempts = 0;
-    QList <CityItem> cityItemsList;
-    QFile inputData(DATA_FILE_PATH);
-    if (!inputData.open(QFile::ReadOnly))
-    {
-        qCritical() << "Cannot open the file!";
-        return cityItemsList;
-    }
+    skippedItemsCount = 0;
+    cityItemsVector.clear();
 
-    while (!inputData.atEnd()) {
+    std::string line;
+    std::ifstream inputData(DATA_FILE_PATH);
+    if (!inputData.is_open())
+        return false;
+
+    while (std::getline(inputData,line))
+    {
         CityItem item;
-        QString line = inputData.readLine();
         if (!getDataFromLine(line, item))
-            unsuccesfullAttempts++;
+            skippedItemsCount++;
         else
-            cityItemsList.push_back(item);
+            cityItemsVector.push_back(item);
     }
 
     inputData.close();
-    qDebug("%d item(s) skipped during loading from file",unsuccesfullAttempts);
-    return cityItemsList;
+//    qDebug("%d item(s) skipped during loading from file",unsuccesfullAttempts);
+    return true;
 }
 
-bool DataLoader::getDataFromLine(QString cityItemLine, CityItem &cityItem)
+bool DataLoader::getDataFromLine(const std::string &cityItemLine, CityItem &cityItem)
 {
-    if ((cityItemLine.count('\t') + 1) < COLUMS_COUNT)
-        return false;
-    QStringList lineData = cityItemLine.split('\t');
-    if (!m_continetNames.contains(lineData.at(0)))
+    if (cityItemLine.empty())
         return false;
 
-    cityItem.continentName = lineData.at(0);
-    cityItem.countryName = lineData.at(1);
-    cityItem.cityName = lineData.at(2);
+    std::vector <std::string> cityItemData;
+    int columnCount = 0;
+    size_t startPos = 0, endPos = 0;
 
-    bool wasConverted = false;
-    cityItem.cityPopulation = lineData.at(3).toUInt(&wasConverted);
-    if (!wasConverted)
+    while(startPos < cityItemLine.length())
+    {
+        endPos = cityItemLine.find('\t', startPos);
+        if (endPos == std::string::npos)
+            endPos = cityItemLine.length();
+
+        std::string str = cityItemLine.substr(startPos,endPos-startPos);
+        cityItemData.push_back(str);
+
+        startPos = endPos + 1;
+        columnCount++ ;
+    }
+
+    if (columnCount != COLUMS_COUNT)
         return false;
 
-    cityItem.recordHighTempereture = lineData.at(4).toInt(&wasConverted);
-    if (!wasConverted)
+    //fill CityItem data with string info
+    auto it = std::find(DataLoader::CONTINENTS.begin(), DataLoader::CONTINENTS.end(), cityItemData[0]);
+    if (it == DataLoader::CONTINENTS.end())
         return false;
 
-    cityItem.recordLowTempereture = lineData.at(5).toInt(&wasConverted);
-    if (!wasConverted)
+    cityItem.setContinent(cityItemData[0]);
+    cityItem.setCountry(cityItemData[1]);
+    cityItem.setCity(cityItemData[2]);
+    try
+    {
+        cityItem.setPopulation(std::stoul(cityItemData[3],nullptr));
+        cityItem.setHighestT(std::stod(cityItemData[4],nullptr));
+        cityItem.setLowestT(std::stod(cityItemData[5],nullptr));
+    }
+    catch(const std::invalid_argument&)
+    {
         return false;
+    }
 
     return true;
 }
 
-QString DataLoader::cityItemToLine(CityItem cityItem)
+std::string DataLoader::cityItemToLine(const CityItem &cityItem)
 {
-    QString cityItemLine = "";
-    cityItemLine = cityItem.continentName + '\t';
-    cityItemLine += cityItem.countryName + '\t';
-    cityItemLine += cityItem.cityName + '\t';
-    cityItemLine += QString::number(cityItem.cityPopulation) + '\t';
-    cityItemLine += QString::number(cityItem.recordHighTempereture) + '\t';
-    cityItemLine += QString::number(cityItem.recordLowTempereture) + '\n';
+    auto cityItemLine = cityItem.getContinent() + '\t';
+    cityItemLine += cityItem.getCountry() + '\t';
+    cityItemLine += cityItem.getCity() + '\t';
+    cityItemLine += std::to_string(cityItem.getPopulation()) + '\t';
+    cityItemLine += std::to_string(cityItem.getHighestT()) + '\t';
+    cityItemLine += std::to_string(cityItem.getLowestT()) + '\n';
 
     return cityItemLine;
 }
 
-bool DataLoader::writeCityItemsList(QList <CityItem> cityItemsList, unsigned int &savedItemsCounter)
+bool DataLoader::writeCityItemsVector(const std::vector <CityItem> &cityItemsVector, unsigned int &savedItemsCounter)
 {
-    QFile outputData(DATA_FILE_PATH);
-    if (!outputData.open(QFile::WriteOnly))
-    {
-        qCritical() << "Cannot write data to the file!";
-        return false;
-    }
-
+    std::ofstream outputData(DATA_FILE_PATH);
     savedItemsCounter = 0;
-    QTextStream stream( &outputData );
 
-    for (int i = 0; i < cityItemsList.size(); i++)
+    if (!outputData.is_open())
+        return false;
+
+    for (auto &i : cityItemsVector)
     {
-        stream << cityItemToLine(cityItemsList.at(i));
+        outputData << cityItemToLine(i);
         savedItemsCounter++;
     }
-    qInfo() << "Data successfully saved";
 
+    outputData.close();
     return true;
 }

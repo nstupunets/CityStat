@@ -1,69 +1,59 @@
 #include "citystatmainwindow.h"
 
 #include "addnewcitydialog.h"
-#include "citystatitemdelegate.h"
-#include "citystatmodel.h"
 #include "ui_citystatmainwindow.h"
 
 CityStatMainWindow::CityStatMainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::CityStatMainWindow),
-    m_cityStatisticsModel{new CityStatModel()},
-    m_comboDelegate{new CityStatItemDelegate()},
-    m_addNewCityDialog{new AddNewCityDialog()}
+    m_statusBarWidget(new StatusBarWidget(this))
 {
     ui->setupUi(this);
+    ui->statusBarLayout->addWidget(m_statusBarWidget);
 
-    ui->cityTableView->setModel(m_cityStatisticsModel);
-    ui->cityTableView->setItemDelegateForColumn(0,m_comboDelegate);
+    QString message;
+    unsigned int skippedItemsCount = 0;
+    auto successfull = m_cityStatisticsModel.readData(skippedItemsCount);
+    if (!successfull)
+        message = "Not able to load from file";
+    else if (skippedItemsCount)
+        message = QString::number(skippedItemsCount) + "item(s) skipped during loading from file";
+    else
+        message = "Data successfully loaded";
+    m_statusBarWidget->showAdditionalInfo(message);
+    m_statusBarWidget->changePopulationStatisticsMessage(m_cityStatisticsModel);
 
-    //table view style
-    ui->cityTableView->setStyleSheet("QHeaderView::section { background-color:#e1e1e1; border: 1px solid #6c6c6c; padding-left: 6px;padding-right: 6px;}");
+    ui->cityTableView->setModel(&m_cityStatisticsModel);
+    ui->cityTableView->setItemDelegateForColumn(0,&m_comboDelegate);
     ui->cityTableView->resizeColumnsToContents();
 
     //connections
-    connect(m_addNewCityDialog, SIGNAL(addNewItem(QStringList)), this, SLOT(onNewItemAdded(QStringList)));
-    connect(this, SIGNAL(initiateDataSave()), m_cityStatisticsModel, SLOT(saveDataInitiated()));
-    connect(m_cityStatisticsModel, SIGNAL(populationChanged(unsigned int,unsigned int,unsigned int)),this, SLOT(updateStatusBar(unsigned int,unsigned int,unsigned int)));
-    connect(m_cityStatisticsModel, SIGNAL(isSaveDataSuccessfull(bool, unsigned int)), this, SLOT(showSaveDataResultMessage(bool, unsigned int)));
-
-    m_cityStatisticsModel->fillPopulationInfo();
+    connect(&m_cityStatisticsModel, &CityStatModel::populationStatisticsChanged, this, &CityStatMainWindow::onPopulationStatisticsChanged);
+    connect(&m_cityStatisticsModel, &CityStatModel::dataSaved, this, &CityStatMainWindow::showSaveDataResultMessage);
+    connect(ui->addNewItem, &QPushButton::clicked, this, &CityStatMainWindow::onAddNewItemClicked);
+    connect(ui->saveDataPushButton, &QPushButton::clicked, this, &CityStatMainWindow::onSaveDataPushButtonClicked);
 }
 
 CityStatMainWindow::~CityStatMainWindow()
 {
-    delete m_cityStatisticsModel;
-    delete m_comboDelegate;
-    delete m_addNewCityDialog;
     delete ui;
 }
 
-void CityStatMainWindow::onNewItemAdded(QStringList itemInfo)
+void CityStatMainWindow::onNewItemAdded(CityItem item)
 {
-    m_cityStatisticsModel->insertRows(m_cityStatisticsModel->rowCount(),1);
-    m_cityStatisticsModel->setData(m_cityStatisticsModel->index(m_cityStatisticsModel->rowCount()-1,0),QVariant(itemInfo.at(0)));
-    m_cityStatisticsModel->setData(m_cityStatisticsModel->index(m_cityStatisticsModel->rowCount()-1,1),QVariant(itemInfo.at(1)));
-    m_cityStatisticsModel->setData(m_cityStatisticsModel->index(m_cityStatisticsModel->rowCount()-1,2),QVariant(itemInfo.at(2)));
-    m_cityStatisticsModel->setData(m_cityStatisticsModel->index(m_cityStatisticsModel->rowCount()-1,3),QVariant(itemInfo.at(3)));
-    m_cityStatisticsModel->setData(m_cityStatisticsModel->index(m_cityStatisticsModel->rowCount()-1,4),QVariant(itemInfo.at(4)));
-    m_cityStatisticsModel->setData(m_cityStatisticsModel->index(m_cityStatisticsModel->rowCount()-1,5),QVariant(itemInfo.at(5)));
+    m_cityStatisticsModel.insertCityItem(item);
+    m_statusBarWidget->showAdditionalInfo("New item added");
 }
 
-void CityStatMainWindow::on_addNewItem_clicked()
+void CityStatMainWindow::onSaveDataPushButtonClicked()
 {
-    m_addNewCityDialog->show();
+    m_cityStatisticsModel.saveData();
 }
 
-
-void CityStatMainWindow::on_saveDataPushButton_clicked()
-{
-    emit initiateDataSave();
-}
-
-void CityStatMainWindow::showSaveDataResultMessage(bool isSavingSuccessfull, unsigned int savedItemsCounter)
+void CityStatMainWindow::showSaveDataResultMessage(bool success, unsigned int savedItemsCounter)
 {
     QMessageBox msgBox(this);
-    if (isSavingSuccessfull)
+    if (success)
     {
         msgBox.setText("Data was saved successfully");
         msgBox.setInformativeText(QString::number(savedItemsCounter) + " item(s) were written to file");
@@ -77,10 +67,17 @@ void CityStatMainWindow::showSaveDataResultMessage(bool isSavingSuccessfull, uns
     msgBox.exec();
 }
 
-void CityStatMainWindow::updateStatusBar(unsigned int maxPopulation,unsigned int minPopulation,unsigned int totalPopulation)
+void CityStatMainWindow::onAddNewItemClicked()
 {
-    QString message = "Max: " + QString::number(maxPopulation) +
-                      "\t\tMin: " + QString::number(minPopulation) +
-                      "\t\tTotal: " + QString::number(totalPopulation);
-    ui->statisticsStatusBar->showMessage(message);
+    auto *addNewCityDialog = new AddNewCityDialog(this);
+    addNewCityDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+
+    connect(addNewCityDialog, &AddNewCityDialog::itemAdded, this, &CityStatMainWindow::onNewItemAdded);
+
+    addNewCityDialog->show();
+}
+
+void CityStatMainWindow::onPopulationStatisticsChanged()
+{
+    m_statusBarWidget->changePopulationStatisticsMessage(m_cityStatisticsModel);
 }

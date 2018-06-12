@@ -1,6 +1,8 @@
 #ifndef ADDNEWCITYDIALOG_H
 #define ADDNEWCITYDIALOG_H
 
+#include "cityitem.h"
+
 #include <QDialog>
 #include <QStringList>
 #include <QMessageBox>
@@ -17,15 +19,14 @@ public:
     explicit AddNewCityDialog(QWidget *parent = 0);
     ~AddNewCityDialog();
 signals:
-    void addNewItem(QStringList itemInfo);
+    void itemAdded(CityItem item);
 private slots:
-    void on_save_cancel_buttonBox_accepted();
-    void on_save_cancel_buttonBox_rejected();
+    void onSaveCancelButtonBoxAccepted();
+    void onSaveCancelButtonBoxRejected();
+    void showErrorMessage(const QString &reason);
 
 private:
-    void clearInputData();
     Ui::AddNewCityDialog *ui;
-    QMessageBox *m_messageBoxInfo;
 };
 
 #endif // ADDNEWCITYDIALOG_H

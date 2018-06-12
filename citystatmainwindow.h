@@ -1,11 +1,13 @@
 #ifndef CITYSTATMAINWINDOW_H
 #define CITYSTATMAINWINDOW_H
 
-#include <QMainWindow>
+#include "cityitem.h"
+#include "citystatitemdelegate.h"
+#include "citystatmodel.h"
+#include "statusbarwidget.h"
 
-class AddNewCityDialog;
-class CityStatItemDelegate;
-class CityStatModel;
+#include <QMainWindow>
+#include <QLabel>
 
 namespace Ui {
 class CityStatMainWindow;
@@ -20,24 +22,19 @@ public:
     ~CityStatMainWindow();
 public slots:
     void showSaveDataResultMessage(bool isSavingSuccessfull, unsigned int savedItemsCounter);
-    void updateStatusBar(unsigned int maxPopulation,unsigned int minPopulation,unsigned int totalPopulation);
 signals:
     void initiateDataSave();
 private slots:
-    void onNewItemAdded(QStringList);
-    void on_addNewItem_clicked();
+    void onNewItemAdded(CityItem item);
+    void onAddNewItemClicked();
+    void onSaveDataPushButtonClicked();
 
-    void on_saveDataPushButton_clicked();
-
+    void onPopulationStatisticsChanged();
 private:
     Ui::CityStatMainWindow *ui;
-//    std::unique_ptr<CityStatModel> m_cityStatisticsModel;
-//    std::unique_ptr<CityStatItemDelegate> m_comboDelegate;
-//    std::unique_ptr<AddNewCityDialog> m_addNewCityDialog;
-
-    CityStatModel *m_cityStatisticsModel;
-    CityStatItemDelegate *m_comboDelegate;
-    AddNewCityDialog *m_addNewCityDialog;
+    StatusBarWidget *m_statusBarWidget;
+    CityStatModel m_cityStatisticsModel;
+    CityStatItemDelegate m_comboDelegate;
 };
 
 #endif // CITYSTATMAINWINDOW_H
